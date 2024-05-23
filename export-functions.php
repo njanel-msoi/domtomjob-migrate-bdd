@@ -82,8 +82,16 @@ function dump_tables($tables, $source, $target, $ishttps)
         $results[] = generate_insert_statements($table);
     }
     $str = join("\n", $results);
-    return adapt_server_name($str, $source, $target, $ishttps);
+    $updated_sql_content = replace_domain_in_sql($str, $source, $target);
+    if ($ishttps) {
+        $updated_sql_content = replace_domain_in_sql($str, 'http://' . $target, 'https://' . $target);
+    }
+    return $updated_sql_content;
 }
+
+/**
+ * @Deprecated, it doesnt support serialized data
+ */
 function adapt_server_name($str, $source, $target, $ishttps)
 {
     $str = str_replace($source, $target, $str);
@@ -106,4 +114,52 @@ function execute_query($sql)
         $wpdb->query('COMMIT');
     else
         $wpdb->query('ROLLBACK');
+}
+
+// Fonction de remplacement pour les données sérialisées
+function replace_serialized_data($matches, $source_domain, $destination_domain)
+{
+    $serialized_data = $matches[0];
+    $unserialized_data = unserialize($serialized_data);
+
+    if ($unserialized_data === false) {
+        // Si la désérialisation échoue, on retourne l'original
+        return $serialized_data;
+    }
+
+    // Remplacement du nom de domaine
+    $updated_data = recursive_replace_domain($unserialized_data, $source_domain, $destination_domain);
+
+    // Sérialisation des données mises à jour
+    return serialize($updated_data);
+}
+
+// Fonction récursive pour remplacer le domaine dans les données désérialisées
+function recursive_replace_domain($data, $source_domain, $destination_domain)
+{
+    if (is_array($data)) {
+        foreach ($data as $key => $value) {
+            $data[$key] = recursive_replace_domain($value, $source_domain, $destination_domain);
+        }
+    } elseif (is_string($data)) {
+        $data = str_replace($source_domain, $destination_domain, $data);
+    }
+    return $data;
+}
+function replace_domain_in_sql($sql_content, $source_domain, $destination_domain)
+{
+
+    // Replacer les domaines dans les chaînes non sérialisées
+    $sql_content = str_replace($source_domain, $destination_domain, $sql_content);
+
+    // Replacer les domaines dans les données sérialisées
+    $sql_content = preg_replace_callback(
+        '/s:\d+:"(.*?)";/',
+        function ($matches) use ($source_domain, $destination_domain) {
+            return replace_serialized_data($matches, $source_domain, $destination_domain);
+        },
+        $sql_content
+    );
+
+    return $sql_content;
 }

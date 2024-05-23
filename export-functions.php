@@ -68,7 +68,7 @@ function generate_insert_statements($table_name)
     return implode("\n", $insert_statements);
 }
 
-function dump_tables($tables, $source, $target, $ishttps)
+function dump_tables($tables, $source, $target)
 {
     $results = [];
     $results[] = "SET SQL_MODE='ALLOW_INVALID_DATES';";
@@ -82,11 +82,15 @@ function dump_tables($tables, $source, $target, $ishttps)
         $results[] = generate_insert_statements($table);
     }
     $str = join("\n", $results);
-    $updated_sql_content = replace_domain_in_sql($str, $source, $target);
-    if ($ishttps) {
-        $updated_sql_content = replace_domain_in_sql($str, 'http://' . $target, 'https://' . $target);
-    }
-    return $updated_sql_content;
+
+    // replace option for siteurl and homurl
+    $str = str_replace("'siteurl', '$source'", "'siteurl', '$target'", $str);
+    $str = str_replace("'home', '$source'", "'home', '$target'", $str);
+
+    return $str;
+
+    // $updated_sql_content = replace_domain_in_sql($str, $source, $target);
+    // return $updated_sql_content;
 }
 
 /**

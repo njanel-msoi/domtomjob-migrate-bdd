@@ -16,6 +16,7 @@ add_action('admin_menu', function () {
 });
 function dtj_export_plugin()
 {
+
 ?>
     <div class="wrap">
         <h1>DTJ Dabatase migration plugin</h1>
@@ -24,9 +25,20 @@ function dtj_export_plugin()
 
         <?php $all_table_names = get_table_names(); ?>
         <?php
-        $source = isset($_POST['source']) ? $_POST['source'] : $_SERVER['SERVER_NAME'];
-        $target = isset($_POST['target']) ? $_POST['target'] : 'dev.domtomjob.com';
-        $isHttps = isset($_POST['go']) ? (isset($_POST['ishttps']) ? $_POST['ishttps'] : '') : 'on';
+        $protocol = 'http://';
+
+        if (
+            isset($_SERVER['HTTPS']) &&
+            ($_SERVER['HTTPS'] == 'on' || $_SERVER['HTTPS'] == 1) ||
+            isset($_SERVER['HTTP_X_FORWARDED_PROTO']) &&
+            $_SERVER['HTTP_X_FORWARDED_PROTO'] == 'https'
+        ) {
+            $protocol = 'https://';
+        }
+
+        $source = isset($_POST['source']) ? $_POST['source'] : $protocol . $_SERVER['SERVER_NAME'];
+        $target = isset($_POST['target']) ? $_POST['target'] : 'https://dev.domtomjob.com';
+        // $isHttps = isset($_POST['go']) ? (isset($_POST['ishttps']) ? $_POST['ishttps'] : '') : 'on';
 
         $tables_selected = isset($_POST['tables']) ? $_POST['tables'] : $all_table_names;
         ?>
@@ -37,7 +49,7 @@ function dtj_export_plugin()
                     <input type="hidden" name="go" value="1">
                     <label>Source server <input required name="source" value="<?= $source ?>"></label><br>
                     <label>Target server <input required name="target" value="<?= $target ?>"></label><br>
-                    <label>Target HTTPS <input type="checkbox" name="ishttps" <?php if ($isHttps == 'on') echo 'checked'; ?>></label>
+                    <!-- <label>Target HTTPS <input type="checkbox" name="ishttps" <?php /* if ($isHttps == 'on') echo 'checked';*/ ?>></label> -->
                     <br>
                     <select required name="tables[]" multiple="multiple" style="width: 100%; height: 300px;">
                         <?php foreach ($all_table_names as $t) : ?>
